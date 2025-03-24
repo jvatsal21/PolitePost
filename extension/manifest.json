@@ -1,0 +1,16 @@
+{
+    "manifest_version": 3,
+    "name": "Reddit Reply Suggestor",
+    "version": "1.0",
+    "description": "Suggests kinder replies on Reddit in real-time",
+    "permissions": ["scripting", "activeTab"],
+    "host_permissions": ["https://www.reddit.com/*"],
+    "content_scripts": [
+      {
+        "matches": ["https://www.reddit.com/*"],
+        "js": ["content.js"],
+        "css": ["styles.css"]
+      }
+    ]
+  }
+  
