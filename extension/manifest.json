@@ -1,10 +1,13 @@
 {
     "manifest_version": 3,
-    "name": "Reddit Reply Suggestor",
+    "name": "PolitePost: Your AI-Powered Reddit Reply Buddy",
     "version": "1.0",
     "description": "Suggests kinder replies on Reddit in real-time",
     "permissions": ["scripting", "activeTab"],
     "host_permissions": ["https://www.reddit.com/*"],
+    "icons": {
+      "128": "icon.png"
+    },
     "content_scripts": [
       {
         "matches": ["https://www.reddit.com/*"],

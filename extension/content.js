@@ -2,43 +2,51 @@ let state = {
     editable: null,
     echoBox: null,
     listener: null,
-    commentText: ''
+    commentText: '',
+    titleText: '',
+    titlePost: ''
   };
   let debounceTimer;
   
-  async function getChatGPTResponse(draftText, originalComment) {
-    
+  async function getChatGPTResponse(draftText, originalComment, titleText, titlePost) {
     // TODO: Replace API key
     const apiKey = 'OPENAI_API_KEY';
     const url = 'https://api.openai.com/v1/chat/completions';
     const requestBody = {
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: 'You are a reddit moderator bot. You are a helpful assistant that reviews users comments and suggests better replies.' },
-        {
-          role: 'user',
-          content: `
-  Provide a revised reply that is more polite, constructive, or humorous. Output only the revised comment text without any additional labels, explanations, or quotation marks.
-
-  Lets say a thread looks like this:
-
-  User1: "I got an A on my exam"
-
-  User2: "I bet that exam was easy"
-
-  User1 looks to comment "I bet you have no friends". You should respond with something like "Easy or not, I got an A"
-
-  End of example.
-  
-  Here is the comment: "${originalComment}"
-  
-  This is the user's draft reply: "${draftText}"
-          `.trim()
-        }
-      ],
-      max_tokens: 100,
-      temperature: 0.7
-    };
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `
+      You are a helpful assistant that revises user-submitted Reddit comment drafts. You do NOT reply to the original post or comment; you only produce a redrafted version of the user’s text. You aim to remove or reduce hateful, rude, or confrontational language while preserving the user’s original intent. Output only the revised text without any additional commentary, labels, or quotation marks.
+          `
+          },
+          {
+            role: 'user',
+            content: `
+      A user has typed a draft reply to a Reddit comment or post. Your job is to provide a revised version that is more polite, constructive, or humorous, in order to reduce potential harm or negativity.
+      
+      Remember:
+      1. **Do not** reply directly to the original comment.
+      2. **Do not** produce anything beyond the revised text.
+      3. **Do not** change the user’s original intention.
+      4. **Do not** include any extra explanations, disclaimers, or quotation marks in your output.
+      
+      Here is the context (you may use it for background only, but do not respond to it):
+      - Post title: "${titleText}"
+      - Post text: "${titlePost}"
+      - Original comment on post: "${originalComment}"
+      
+      User's draft reply that needs revision:
+      "${draftText}"
+      
+      Now, provide the edited version (and nothing else):
+            `.trim()
+          }
+        ],
+        max_tokens: 100,
+        temperature: 0.7
+      };
   
     const response = await fetch(url, {
       method: 'POST',
@@ -95,6 +103,28 @@ let state = {
     console.log(textContents);
     return textContents;
   }
+
+  function getPost() {
+    const title = document.querySelector('shreddit-title');
+    const titleText = title.getAttribute('title');
+    console.log(titleText);
+    return titleText;
+  }
+
+  function getPostText() {
+    const postObject = document.querySelector('shreddit-post');
+    const neutralDiv = postObject.querySelector('div.text-neutral-content');
+
+    const paragraphs = neutralDiv.querySelectorAll('p');
+    let allText = '';
+
+    paragraphs.forEach((p) => {
+        allText += p.textContent + ' ';
+    });
+
+    console.log(allText.trim());
+    return allText;
+  }
   
   document.addEventListener('focusin', (e) => {
     const editable = e.composedPath().find((el) =>
@@ -103,7 +133,9 @@ let state = {
     );
     if (!editable || editable === state.editable) return;
     cleanup();
-  
+    
+    const titleText = getPost()
+    const titlePost = getPostText()
     const commentText = getParentCommentText(editable);
   
     const echoBox = document.createElement('div');
@@ -154,7 +186,7 @@ let state = {
         echoBox.textContent = 'Thinking...';
         const currentContent = editable.matches('textarea') ? editable.value : editable.innerText;
   
-        getChatGPTResponse(currentContent, commentText)
+        getChatGPTResponse(currentContent, commentText, titleText, titlePost)
           .then((response) => {
             echoBox.textContent = response;
           })
