@@ -4,6 +4,9 @@ This Chrome extension seamlessly integrates with Reddit, providing suggested rep
 ## Overview
 This extension monitors the comments or replies you're typing on Reddit. If your comment might appear potentially negative, confrontational, or hurtful, the extension quickly generates a polite, corrected alternative suggestion using GPT-4o-mini. You can easily replace your original comment with the suggested one by clicking on it.
 
+## Demo
+Here is a link to a demo: [View Demo](https://drive.google.com/file/d/1lb3FHTpF1QsMIUEyIYyrET16jwwtznFB/view?usp=sharing)
+
 ## Features
 - Real-time, context-aware reply suggestions
 - Easy-to-use UI integrated directly into Reddit's interface
