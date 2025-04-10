@@ -7,10 +7,14 @@ let state = {
     titlePost: ''
   };
   let debounceTimer;
+  let suggestionJustAccepted = false;
   
   async function getChatGPTResponse(draftText, originalComment, titleText, titlePost) {
+    const settings = await new Promise((resolve) => {
+      chrome.storage.local.get(['politeness', 'humor', 'conciseness'], resolve);
+    });
     // TODO: Replace API key
-    const apiKey = 'OPENAI_API_KEY';
+    const apiKey = 'API_KEY';
     const url = 'https://api.openai.com/v1/chat/completions';
     const requestBody = {
         model: 'gpt-4o-mini',
@@ -19,6 +23,10 @@ let state = {
             role: 'system',
             content: `
       You are a helpful assistant that revises user-submitted Reddit comment drafts. You do NOT reply to the original post or comment; you only produce a redrafted version of the user’s text. You aim to remove or reduce hateful, rude, or confrontational language while preserving the user’s original intent. Output only the revised text without any additional commentary, labels, or quotation marks.
+      Adjust the rewritten comment based on these preferences by the user (scale 1–5):
+- Politeness: ${settings.politeness || 3}
+- Humor: ${settings.humor || 3}
+- Conciseness: ${settings.conciseness || 3}
           `
           },
           {
@@ -68,6 +76,77 @@ let state = {
            .trim()
            .replace(/^"+|"+$/g, '');
   }
+
+  async function getToneScore(draftText) {
+      const apiKey = 'API_KEY';
+      const url = 'https://api.openai.com/v1/chat/completions';
+    
+      const requestBody = {
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `
+    You are an assistant that evaluates Reddit comment drafts. Your job is to rate the tone of a comment on a scale from 0 to 10:
+    
+    - 0 = extremely hurtful or hostile
+    - 5 = neutral or snarky
+    - 10 = extremely kind or constructive
+    
+    Output ONLY a single number between 0 and 10. Do not include any explanation or formatting.
+            `.trim()
+          },
+          {
+            role: 'user',
+            content: draftText
+          }
+        ],
+        max_tokens: 10,
+        temperature: 0.3
+      };
+    
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+    
+      const data = await response.json();
+    
+      if (data.error) {
+        console.error('Tone score error:', data.error);
+        throw new Error(data.error.message);
+      }
+    
+      const scoreText = data.choices[0].message.content.trim();
+      const score = parseFloat(scoreText);
+    
+      return isNaN(score) ? null : Math.max(0, Math.min(10, score)); // Clamp between 0–10
+  }
+
+  function getBorderColor(score) {
+    // 0 = red (#f44336), 5 = yellow (#ffeb3b), 10 = green (#4caf50)
+    const red = [244, 67, 54];
+    const yellow = [255, 235, 59];
+    const green = [76, 175, 80];
+  
+    let color;
+    if (score <= 5) {
+      // Interpolate red → yellow
+      const ratio = score / 5;
+      color = red.map((r, i) => Math.round(r + ratio * (yellow[i] - r)));
+    } else {
+      // Interpolate yellow → green
+      const ratio = (score - 5) / 5;
+      color = yellow.map((y, i) => Math.round(y + ratio * (green[i] - y)));
+    }
+  
+    return `rgb(${color.join(',')})`;
+  }
+  
   
   function getParentCommentText(editable) {
     let current = editable;
@@ -156,6 +235,7 @@ let state = {
   
     echoBox.addEventListener('click', () => {
       const refinedText = echoBox.textContent;
+      suggestionJustAccepted = true;
   
       if (editable.tagName === 'TEXTAREA') {
         editable.value = refinedText;
@@ -170,7 +250,13 @@ let state = {
   
       editable.focus();
       editable.dispatchEvent(new InputEvent('input', { bubbles: true }));
-      cleanup();
+      const parent = editable?.parentElement;
+      const shadowRoot = parent?.shadowRoot;
+      const borderBox = shadowRoot?.querySelector('div.border');
+      if (borderBox) {
+        borderBox.style.borderColor = 'rgb(76, 175, 80)'; // green
+      }
+      // cleanup();
     });
   
     editable.parentElement.insertAdjacentElement('afterend', echoBox);
@@ -178,13 +264,38 @@ let state = {
     const update = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
   
-      const content = editable.matches('textarea') ? editable.value : editable.innerText;
-  
       echoBox.textContent = "";
   
       debounceTimer = setTimeout(() => {
-        echoBox.textContent = 'Thinking...';
         const currentContent = editable.matches('textarea') ? editable.value : editable.innerText;
+        if (!currentContent.trim()) {
+          echoBox.textContent = '';
+          return;
+        }
+        if (suggestionJustAccepted) {
+          suggestionJustAccepted = false;
+          return;
+        }
+        echoBox.textContent = 'Thinking...';
+        getToneScore(currentContent)
+          .then(score => {
+            const color = getBorderColor(score);
+
+            const parent = editable?.parentElement;
+            console.log("WIP: Parent");
+            console.log(parent);
+            const shadowRoot = parent?.shadowRoot;
+            console.log("WIP: Shadow Root");
+            console.log(shadowRoot);
+            const borderBox = shadowRoot?.querySelector('div.border');
+            if (borderBox) {
+              console.log(`🎨 Applying border color for tone score ${score}: ${color}`);
+              borderBox.style.borderColor = color;
+            }
+          })
+          .catch(err => {
+            console.warn('Could not get tone score:', err);
+          });
   
         getChatGPTResponse(currentContent, commentText, titleText, titlePost)
           .then((response) => {

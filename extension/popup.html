@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; width: 250px; padding: 10px; }
+    label { display: block; margin: 10px 0 2px; }
+    input[type="range"] { width: 100%; }
+  </style>
+</head>
+<body>
+  <h3>Tone Settings</h3>
+
+  <label for="politeness">Politeness</label>
+  <input type="range" id="politeness" min="1" max="5" value="3">
+
+  <label for="humor">Humor</label>
+  <input type="range" id="humor" min="1" max="5" value="3">
+
+  <label for="conciseness">Conciseness</label>
+  <input type="range" id="conciseness" min="1" max="5" value="3">
+
+  <p id="status" style="font-size: 0.9em; color: green;"></p>
+
+  <script src="popup.js"></script>
+</body>
+</html>

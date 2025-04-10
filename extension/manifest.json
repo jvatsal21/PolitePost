@@ -1,19 +1,30 @@
 {
-    "manifest_version": 3,
-    "name": "PolitePost: Your AI-Powered Reddit Reply Buddy",
-    "version": "1.0",
-    "description": "Suggests kinder replies on Reddit in real-time",
-    "permissions": ["scripting", "activeTab"],
-    "host_permissions": ["https://www.reddit.com/*"],
-    "icons": {
+  "manifest_version": 3,
+  "name": "PolitePost: Your AI-Powered Reddit Reply Buddy",
+  "version": "1.0",
+  "description": "Suggests kinder replies on Reddit in real-time",
+  "permissions": [
+    "storage",            
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.reddit.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",  
+    "default_icon": {
       "128": "icon.png"
-    },
-    "content_scripts": [
-      {
-        "matches": ["https://www.reddit.com/*"],
-        "js": ["content.js"],
-        "css": ["styles.css"]
-      }
-    ]
-  }
-  
+    }
+  },
+  "icons": {
+    "128": "icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.reddit.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ]
+}
